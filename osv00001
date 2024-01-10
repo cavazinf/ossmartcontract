@@ -1,0 +1,27 @@
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.23;
+
+import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
+
+contract OrdemDeServico is ERC721 {
+    uint256 public tokenCounter;
+    mapping(uint256 => Order) public orders;
+
+    struct Order {
+        uint256 orderId;
+        address clientAddress;
+        string serviceDescription;
+        uint256 totalValue;
+    }
+// criado por tiago ferreira cavazin 10/01/2024 
+    constructor() ERC721("OrdemDeServicoTokentfc24", "OST") {
+        tokenCounter = 0;
+    }
+
+    function createOrder(address _clientAddress, string memory _serviceDescription, uint256 _totalValue) external {
+        uint256 newItemId = tokenCounter;
+        orders[newItemId] = Order(tokenCounter, _clientAddress, _serviceDescription, _totalValue);
+        _safeMint(msg.sender, newItemId);
+        tokenCounter++;
+    }
+}
