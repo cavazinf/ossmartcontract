@@ -1,0 +1,92 @@
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.21;
+
+import "@openzeppelin/contracts/token/ERC1155/ERC1155.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/security/Pausable.sol";
+import "@openzeppelin/contracts/utils/Counters.sol";
+
+contract ERC1155OrdemDeServico is ERC1155, Ownable, Pausable {
+    using Counters for Counters.Counter;
+
+    // Contador para ID único das ordens de serviço
+    Counters.Counter private _orderIdCounter;
+
+    // Estrutura para armazenar informações específicas da ordem de serviço
+    struct OrdemDeServico {
+        address titularVeiculo;
+        string data;
+        string garantia;
+        string servico;
+        string pecas;
+        address responsavelOs;
+    }
+
+    // Mapeia o ID da ordem de serviço para suas informações
+    mapping(uint256 => OrdemDeServico) private _ordensDeServico;
+
+    // Metadados
+    string private _metadata;
+
+    // Evento emitido quando uma nova ordem de serviço é criada
+    event OrdemDeServicoCriada(uint256 indexed orderId, address indexed titularVeiculo);
+
+    constructor(string memory uri, string memory metadata) ERC1155(uri) Ownable(msg.sender) {
+        _metadata = metadata;
+    }
+
+    // Função para criar uma nova ordem de serviço
+    function criarOrdemDeServico(
+        address titularVeiculo,
+        string memory data,
+        string memory garantia,
+        string memory servico,
+        string memory pecas,
+        address responsavelOs
+    ) external {
+        uint256 orderId = _orderIdCounter.current();
+        _orderIdCounter.increment();
+
+        _ordensDeServico[orderId] = OrdemDeServico({
+            titularVeiculo: titularVeiculo,
+            data: data,
+            garantia: garantia,
+            servico: servico,
+            pecas: pecas,
+            responsavelOs: responsavelOs
+        });
+
+        // Emitir evento
+        emit OrdemDeServicoCriada(orderId, titularVeiculo);
+    }
+
+    // Função para pausar a criação de novas ordens de serviço
+    function pausarContratacao() external onlyOwner {
+        _pause();
+    }
+
+    // Função para retomar a criação de novas ordens de serviço
+    function retomarContratacao() external onlyOwner {
+        _unpause();
+    }
+
+    // Função para queimar tokens
+    function queimarTokens(address account, uint256 tokenId, uint256 amount) external onlyOwner {
+        _burn(account, tokenId, amount);
+    }
+
+    // Função para obter informações da ordem de serviço
+    function obterOrdemDeServico(uint256 orderId) external view returns (OrdemDeServico memory) {
+        return _ordensDeServico[orderId];
+    }
+
+    // Função para obter os metadados
+    function obterMetadados() external view returns (string memory) {
+        return _metadata;
+    }
+
+    // Função para atualizar os metadados
+    function atualizarMetadados(string memory metadata) external onlyOwner {
+        _metadata = metadata;
+    }
+}
