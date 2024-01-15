@@ -1,0 +1,67 @@
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.21;
+
+import "@openzeppelin/contracts/token/ERC1155/ERC1155.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/security/Pausable.sol";
+import "@openzeppelin/contracts/utils/Counters.sol";
+
+contract ERC1155OrdemDeServico is ERC1155, Ownable, Pausable {
+    using Counters for Counters.Counter;
+
+    Counters.Counter private _orderIdCounter;
+
+    struct OrdemDeServico {
+        string data;
+        address responsavel;
+        string ipfsCid; // CID do IPFS para o documento da ordem de serviço
+    }
+
+    mapping(uint256 => OrdemDeServico) private _ordensDeServico;
+
+    event OrdemDeServicoCriada(uint256 indexed orderId, address indexed responsavel);
+
+    constructor(string memory uri) ERC1155(uri) Ownable(msg.sender) {
+    _pause(); // O contrato é pausado no momento da criação para evitar interações não controladas
+}
+
+
+    function criarOrdemDeServico(string memory data, string memory ipfsCid) external onlyOwner whenNotPaused {
+        uint256 orderId = _orderIdCounter.current();
+        _orderIdCounter.increment();
+
+        _ordensDeServico[orderId] = OrdemDeServico({
+            data: data,
+            responsavel: msg.sender,
+            ipfsCid: ipfsCid
+        });
+
+        emit OrdemDeServicoCriada(orderId, msg.sender);
+
+        _mint(msg.sender, orderId, 1, "");
+    }
+
+    function obterOrdemDeServico(uint256 orderId) external view returns (OrdemDeServico memory) {
+        return _ordensDeServico[orderId];
+    }
+
+    // Funções para Pausar e Retomar o contrato
+    function retomarContrato() external onlyOwner {
+        _unpause();
+    }
+
+    // Função para alterar o URI base, se necessário
+    function setURI(string memory newURI) external onlyOwner {
+        _setURI(newURI);
+    }
+
+    // Função para retirar ETH do contrato
+    function retirarETH(uint256 amount) external onlyOwner {
+        payable(owner()).transfer(amount);
+    }
+
+    // Função para retirar tokens ERC1155 do contrato
+    function retirarTokens(uint256 id, uint256 amount) external onlyOwner {
+        _burn(address(this), id, amount);
+    }
+}
